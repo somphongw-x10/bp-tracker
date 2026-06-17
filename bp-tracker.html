@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>บันทึกความดันโลหิต</title>
+<style>
+  /* ===== IKEA-inspired design system ===== */
+  :root{
+    --ink:#111111; --muted:#484848; --white:#fff;
+    --bg-soft:#F5F5F5; --line:#DFDFDF; --line-strong:#CCCCCC;
+    --red:#CC0008; --teal:#AADDDD; --yellow:#FFEB3B;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;
+    font-family:"Noto Sans","Noto Sans Thai",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    background:var(--white);color:var(--ink);line-height:1.5;font-size:16px}
+  header{background:var(--ink);color:var(--white);padding:24px 40px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{margin:0;font-size:28px;font-weight:700;flex:1;letter-spacing:0}
+  .who{font-size:14px;color:var(--white)}
+  .who b{font-weight:700}
+  .who a{color:var(--white);text-decoration:underline;cursor:pointer;margin-left:12px;font-size:14px;font-weight:700}
+  .wrap{max-width:1000px;margin:0 auto;padding:40px 20px}
+  /* tabs as ghost/underline nav */
+  .tabs{display:flex;gap:8px;margin-bottom:32px;border-bottom:1px solid var(--line)}
+  .tab{padding:12px 24px;border:none;background:none;cursor:pointer;
+    color:var(--muted);font-size:16px;font-weight:400;
+    border-bottom:3px solid transparent;margin-bottom:-1px}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--ink);font-weight:700;border-bottom-color:var(--ink)}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:4px;
+    padding:32px;margin-bottom:24px;box-shadow:none}
+  .card h2{margin:0 0 24px;font-size:28px;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px}
+  label{display:block;font-size:14px;color:var(--ink);margin-bottom:8px;font-weight:700}
+  input,select,textarea{width:100%;padding:12px 16px;border:1px solid var(--line-strong);
+    border-radius:4px;font-size:16px;font-family:inherit;background:var(--white);min-height:48px}
+  input:hover,select:hover,textarea:hover{border-color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid rgba(17,17,17,.2);outline-offset:1px;
+    border-color:var(--ink)}
+  input::placeholder,textarea::placeholder{color:var(--line-strong)}
+  textarea{resize:vertical;min-height:56px}
+  .actions{margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  /* primary = solid charcoal pill */
+  .btn{padding:0 32px;height:56px;border:none;border-radius:64px;font-size:16px;font-weight:700;
+    cursor:pointer;background:var(--ink);color:var(--white);display:inline-flex;align-items:center;justify-content:center}
+  .btn:hover{background:var(--muted)}
+  .btn:active{background:#000}
+  /* ghost = text underline */
+  .btn.ghost{background:none;color:var(--ink);height:auto;padding:0;border-radius:0;
+    text-decoration:underline;text-underline-offset:3px}
+  .btn.ghost:hover{color:var(--muted);background:none}
+  .btn.danger{background:none;color:var(--red);height:auto;padding:0;border-radius:0;
+    text-decoration:underline}
+  .btn:disabled{background:var(--line-strong);color:var(--muted);opacity:.6;cursor:not-allowed}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:14px 8px;text-align:center;border-bottom:1px solid var(--line)}
+  th{background:none;color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+  tbody tr:hover{background:var(--bg-soft)}
+  /* status badges per IKEA badge spec */
+  .pill{display:inline-block;padding:4px 8px;border-radius:2px;font-size:12px;font-weight:700;line-height:15px}
+  .pill.normal{background:var(--teal);color:var(--ink)}
+  .pill.elevated{background:var(--yellow);color:var(--ink)}
+  .pill.high{background:var(--red);color:var(--white)}
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:20px;margin-bottom:24px}
+  .stat{background:var(--bg-soft);border-radius:4px;padding:20px;text-align:center}
+  .stat .num{font-size:28px;font-weight:700;color:var(--ink)}
+  .stat .lbl{font-size:12px;color:var(--muted);margin-top:4px;font-weight:700}
+  .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+  .toolbar strong{font-weight:700}
+  .toolbar input{width:auto;min-height:44px}
+  .toolbar .spacer{flex:1}
+  .empty{text-align:center;color:var(--muted);padding:48px 0}
+  .del{color:var(--red);cursor:pointer;background:none;border:none;font-size:16px}
+  .report-head{display:none}
+  /* ---- หน้าจอเข้าสู่ระบบ / ตั้งค่าครั้งแรก ---- */
+  .gate{max-width:600px;margin:64px auto;padding:0 20px}
+  .gate .card{padding:40px 32px}
+  .gate h2{font-size:28px;margin-bottom:8px}
+  .gate p.sub{color:var(--muted);font-size:16px;margin:0 0 24px}
+  .gate label{margin-top:20px}
+  .status{font-size:14px;text-align:center;padding:12px;border-radius:4px;margin-bottom:20px;font-weight:700}
+  .status.ok{background:var(--teal);color:var(--ink)}
+  .status.err{background:var(--red);color:var(--white)}
+  .status.load{background:var(--bg-soft);color:var(--muted)}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+  @media (max-width:599px){
+    header{padding:20px}
+    header h1{font-size:24px}
+    .wrap{padding:24px 16px}
+    .card{padding:20px}
+    .card h2{font-size:24px}
+  }
+  @media print{
+    body{background:#fff}
+    header,.tabs,.actions,.toolbar,.del,th.no-print,td.no-print,.tab,.btn{display:none!important}
+    .card{box-shadow:none;border:none;padding:0}
+    .report-head{display:block;text-align:center;margin-bottom:20px}
+    .report-head h1{margin:0;font-size:28px;font-weight:700}
+    .report-head p{margin:4px 0;color:var(--muted);font-size:13px}
+    .wrap{padding:0;max-width:100%}
+    th,td{border-bottom:1px solid #999;font-size:12px}
+    .pill{border:1px solid #999;background:#fff!important;color:#000!important}
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== หน้าเข้าสู่ระบบ / ตั้งค่าครั้งแรก ========== -->
+<div id="gate" class="gate">
+  <div class="card">
+    <h2>🩺 ระบบบันทึกความดันโลหิต</h2>
+    <p class="sub">ใส่รหัสประจำตัวเพื่อเข้าใช้งาน — เครื่องไหนใช้รหัสเดียวกันจะเห็นข้อมูลชุดเดียวกัน</p>
+
+    <div id="gateStatus" class="status load">กำลังเชื่อมต่อระบบคลาวด์...</div>
+
+    <label>ชื่อ-นามสกุล</label>
+    <input id="gName" placeholder="เช่น สมชาย ใจดี">
+
+    <label>อายุ (ปี)</label>
+    <input id="gAge" type="number" min="0" placeholder="เช่น 45">
+
+    <label>รหัสประจำตัว (Access Code)</label>
+    <input id="gCode" placeholder="เช่น เบอร์โทร 0812345678">
+    <div class="hint">จำรหัสนี้ไว้ ใช้รหัสเดิมตอนเปลี่ยนเครื่องเพื่อดึงข้อมูลเก่ากลับมา</div>
+
+    <div class="actions">
+      <button class="btn" id="gEnter" onclick="enterApp()" disabled>เข้าใช้งาน →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== แอปหลัก ========== -->
+<div id="app" style="display:none">
+<header>
+  <h1>🩺 ระบบบันทึกความดันโลหิต</h1>
+  <div class="who">
+    <b id="whoName">-</b> · รหัส <span id="whoCode">-</span>
+    <a onclick="signOut()">ออก</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" id="tabForm" onclick="showTab('form')">📝 หน้ากรอกข้อมูล</button>
+    <button class="tab" id="tabReport" onclick="showTab('report')">📊 หน้ารายงาน</button>
+  </div>
+
+  <!-- ===== หน้ากรอกข้อมูล ===== -->
+  <section id="viewForm">
+    <div class="card">
+      <h2>บันทึกค่าความดัน <span style="font-weight:400;font-size:13px;color:var(--muted)">— วันเวลาบันทึกอัตโนมัติ</span></h2>
+      <div class="grid">
+        <div>
+          <label>ตัวบน / Systolic (mmHg)</label>
+          <input id="sys" type="number" min="0" placeholder="เช่น 120" autofocus>
+        </div>
+        <div>
+          <label>ตัวล่าง / Diastolic (mmHg)</label>
+          <input id="dia" type="number" min="0" placeholder="เช่น 80">
+        </div>
+        <div>
+          <label>ชีพจร / Pulse (ครั้ง/นาที)</label>
+          <input id="pulse" type="number" min="0" placeholder="เช่น 72">
+        </div>
+        <div>
+          <label>ช่วงเวลา</label>
+          <select id="period">
+            <option value="เช้า">เช้า</option>
+            <option value="กลางวัน">กลางวัน</option>
+            <option value="เย็น">เย็น</option>
+            <option value="ก่อนนอน">ก่อนนอน</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <label>หมายเหตุ</label>
+        <textarea id="note" placeholder="เช่น หลังออกกำลังกาย, ทานยาแล้ว ฯลฯ"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn" id="saveBtn" onclick="saveRecord()">💾 บันทึกข้อมูล</button>
+        <button class="btn ghost" onclick="clearForm()">ล้างฟอร์ม</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>รายการล่าสุด</h2>
+      <div id="recentList"></div>
+    </div>
+  </section>
+
+  <!-- ===== หน้ารายงาน ===== -->
+  <section id="viewReport" style="display:none">
+    <div class="card">
+      <div class="report-head">
+        <h1>รายงานผลการวัดความดันโลหิต</h1>
+        <p id="rpPatient"></p>
+        <p id="rpDate"></p>
+      </div>
+
+      <div class="toolbar">
+        <strong>ตัวกรอง:</strong>
+        <input type="date" id="filterFrom" onchange="renderReport()">
+        <span>ถึง</span>
+        <input type="date" id="filterTo" onchange="renderReport()">
+        <span class="spacer"></span>
+        <button class="btn ghost" onclick="clearFilter()">ล้างตัวกรอง</button>
+        <button class="btn" onclick="window.print()">🖨️ พิมพ์รายงาน</button>
+      </div>
+
+      <div class="summary" id="summary"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>วันที่</th><th>เวลา</th><th>ช่วง</th>
+            <th>ตัวบน</th><th>ตัวล่าง</th><th>ชีพจร</th>
+            <th>ระดับ</th><th>หมายเหตุ</th><th class="no-print"></th>
+          </tr>
+        </thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+</div>
+
+<!-- ========== Firebase ========== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, setLogLevel }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ====== ⬇️ วางค่าคอนฟิกจาก Firebase ของคุณตรงนี้ ======
+const firebaseConfig = {
+  apiKey: "AIzaSyBzp6F23__FWVLR5nZo0zDZwtD2DAxgrCw",
+  authDomain: "bp-tracker-q.firebaseapp.com",
+  projectId: "bp-tracker-q",
+  storageBucket: "bp-tracker-q.firebasestorage.app",
+  messagingSenderId: "952142854863",
+  appId: "1:952142854863:web:a1625b54a3a7ee4d54d5ba",
+  measurementId: "G-08BQX1H15K"
+};
+// =====================================================
+
+const KEY_CODE = "bp_code", KEY_NAME = "bp_name", KEY_AGE = "bp_age";
+let db, unsub = null;
+
+const $ = id => document.getElementById(id);
+const setStatus = (msg, cls) => { const s=$("gateStatus"); s.textContent=msg; s.className="status "+cls; };
+
+try {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  const auth = getAuth(app);
+  setLogLevel("error");
+  signInAnonymously(auth).catch(e => setStatus("เข้าระบบไม่สำเร็จ: "+e.code, "err"));
+  // เติมค่าเดิมทันที (ไม่รอ auth) เพื่อเลี่ยงการเขียนทับสิ่งที่ผู้ใช้พิมพ์
+  $("gName").value = localStorage.getItem(KEY_NAME) || "";
+  $("gAge").value  = localStorage.getItem(KEY_AGE) || "";
+  $("gCode").value = localStorage.getItem(KEY_CODE) || "";
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      setStatus("เชื่อมต่อระบบคลาวด์สำเร็จ ✓", "ok");
+      $("gEnter").disabled = false;
+      // ถ้าเคยเข้าแล้วและมีครบ ให้เข้าอัตโนมัติ
+      if (localStorage.getItem(KEY_CODE) && localStorage.getItem(KEY_NAME)) enterApp();
+    }
+  });
+} catch (e) {
+  setStatus("ยังไม่ได้ตั้งค่า Firebase — โปรดวาง config ในโค้ด", "err");
+}
+
+// ---------- สถานะแอป ----------
+let records = [];
+let patient = { name:"", age:"" };
+let code = "";
+
+// ---------- ระดับความดัน ----------
+function classify(sys, dia){
+  if(sys >= 140 || dia >= 90) return {cls:"high", txt:"สูง"};
+  if(sys >= 120 || dia >= 80) return {cls:"elevated", txt:"เริ่มสูง"};
+  return {cls:"normal", txt:"ปกติ"};
+}
+
+// ---------- เข้าใช้งาน ----------
+window.enterApp = function(){
+  const name = $("gName").value.trim();
+  const age  = $("gAge").value.trim();
+  code = $("gCode").value.trim();
+  if(!name){ setStatus("กรุณากรอกชื่อ-นามสกุล", "err"); return; }
+  if(!code){ setStatus("กรุณากรอกรหัสประจำตัว", "err"); return; }
+
+  // โค้ด Firestore ห้ามมี / และต้องไม่ว่าง
+  if(code.includes("/")){ setStatus("รหัสห้ามมีเครื่องหมาย /", "err"); return; }
+
+  patient = { name, age };
+  localStorage.setItem(KEY_NAME, name);
+  localStorage.setItem(KEY_AGE, age);
+  localStorage.setItem(KEY_CODE, code);
+
+  // เข้าหน้าแอปก่อน — ไม่ให้ปัญหาฝั่งคลาวด์มาขวางการเข้าใช้งาน
+  $("gate").style.display = "none";
+  $("app").style.display = "block";
+  $("whoName").textContent = name;
+  $("whoCode").textContent = code;
+
+  // เก็บข้อมูลผู้ป่วยลงคลาวด์ (กันพลาดด้วย try/catch)
+  try {
+    setDoc(doc(db, "patients", code), { name, age, updated: Date.now() }, { merge:true })
+      .catch(e => console.warn("บันทึกชื่อขึ้นคลาวด์ไม่สำเร็จ:", e.message));
+  } catch(e){ console.warn("setDoc error:", e.message); }
+
+  listen();
+};
+
+window.signOut = function(){
+  if(unsub) unsub();
+  localStorage.removeItem(KEY_CODE); // เก็บชื่อไว้ ลบเฉพาะรหัสเพื่อเปลี่ยนผู้ใช้
+  location.reload();
+};
+
+// ---------- ฟังข้อมูลแบบเรียลไทม์ ----------
+function listen(){
+  if(unsub) unsub();
+  const col = collection(db, "patients", code, "records");
+  unsub = onSnapshot(col, snap => {
+    records = [];
+    snap.forEach(d => records.push({ id:d.id, ...d.data() }));
+    renderRecent();
+    if($("viewReport").style.display !== "none") renderReport();
+  }, err => alert("ดึงข้อมูลไม่สำเร็จ: "+err.message));
+}
+
+// ---------- บันทึก ----------
+window.saveRecord = async function(){
+  const sys = +$("sys").value, dia = +$("dia").value;
+  if(!sys || !dia){ alert("กรุณากรอกค่าตัวบนและตัวล่าง"); return; }
+
+  const now = new Date();
+  const rec = {
+    date: now.toISOString().slice(0,10),         // อัตโนมัติ
+    time: now.toTimeString().slice(0,5),         // อัตโนมัติ
+    ts: now.getTime(),
+    period: $("period").value,
+    sys, dia,
+    pulse: $("pulse").value,
+    note: $("note").value.trim()
+  };
+  const btn = $("saveBtn"); btn.disabled = true; btn.textContent = "กำลังบันทึก...";
+  try{
+    await setDoc(doc(db, "patients", code, "records", String(rec.ts)), rec);
+    clearForm();
+  }catch(e){ alert("บันทึกไม่สำเร็จ: "+e.message); }
+  btn.disabled = false; btn.textContent = "💾 บันทึกข้อมูล";
+};
+
+window.clearForm = function(){
+  ["sys","dia","pulse","note"].forEach(id=>$(id).value="");
+  $("sys").focus();
+};
+
+window.delRecord = async function(id){
+  if(!confirm("ลบรายการนี้?")) return;
+  try{ await deleteDoc(doc(db, "patients", code, "records", id)); }
+  catch(e){ alert("ลบไม่สำเร็จ: "+e.message); }
+};
+
+// ---------- แท็บ ----------
+window.showTab = function(t){
+  $("viewForm").style.display  = t==="form" ? "block":"none";
+  $("viewReport").style.display = t==="report" ? "block":"none";
+  $("tabForm").classList.toggle("active", t==="form");
+  $("tabReport").classList.toggle("active", t==="report");
+  if(t==="report") renderReport();
+};
+
+// ---------- helper ----------
+function sortByTs(a,b){ return (b.ts||0)-(a.ts||0); }
+function fmtDate(d){
+  if(!d) return "-";
+  const [y,m,day]=d.split("-");
+  return `${day}/${m}/${(+y)+543}`;
+}
+function rowHTML(r){
+  const c = classify(r.sys, r.dia);
+  return `<tr>
+    <td>${fmtDate(r.date)}</td><td>${r.time||"-"}</td><td>${r.period||"-"}</td>
+    <td><b>${r.sys}</b></td><td><b>${r.dia}</b></td><td>${r.pulse||"-"}</td>
+    <td><span class="pill ${c.cls}">${c.txt}</span></td>
+    <td>${r.note||"-"}</td>
+    <td class="no-print"><button class="del" onclick="delRecord('${r.id}')">🗑</button></td>
+  </tr>`;
+}
+const TH = `<thead><tr><th>วันที่</th><th>เวลา</th><th>ช่วง</th><th>บน</th><th>ล่าง</th>
+  <th>ชีพจร</th><th>ระดับ</th><th>หมายเหตุ</th><th class="no-print"></th></tr></thead>`;
+
+function renderRecent(){
+  const list = $("recentList");
+  if(!records.length){ list.innerHTML='<div class="empty">ยังไม่มีข้อมูล</div>'; return; }
+  const rows = [...records].sort(sortByTs).slice(0,5).map(rowHTML).join("");
+  list.innerHTML = `<table>${TH}<tbody>${rows}</tbody></table>`;
+}
+
+function renderReport(){
+  const from = $("filterFrom").value, to = $("filterTo").value;
+  let data = [...records];
+  if(from) data = data.filter(r=>r.date>=from);
+  if(to)   data = data.filter(r=>r.date<=to);
+  data.sort(sortByTs);
+
+  $("rpPatient").textContent = `ชื่อผู้ป่วย: ${patient.name||"-"}   อายุ: ${patient.age||"-"} ปี`;
+  const range = (from||to) ? `ช่วงวันที่: ${from?fmtDate(from):"เริ่มต้น"} - ${to?fmtDate(to):"ปัจจุบัน"}` : "ข้อมูลทั้งหมด";
+  $("rpDate").textContent = `${range}   |   พิมพ์เมื่อ: ${fmtDate(new Date().toISOString().slice(0,10))}`;
+
+  const sum = $("summary");
+  if(data.length){
+    const avg = k => Math.round(data.reduce((s,r)=>s+(+r[k]||0),0)/data.length);
+    const maxS = Math.max(...data.map(r=>r.sys));
+    sum.innerHTML = `
+      <div class="stat"><div class="num">${data.length}</div><div class="lbl">จำนวนครั้ง</div></div>
+      <div class="stat"><div class="num">${avg("sys")}/${avg("dia")}</div><div class="lbl">ค่าเฉลี่ย (บน/ล่าง)</div></div>
+      <div class="stat"><div class="num">${avg("pulse")||"-"}</div><div class="lbl">ชีพจรเฉลี่ย</div></div>
+      <div class="stat"><div class="num">${maxS}</div><div class="lbl">ตัวบนสูงสุด</div></div>`;
+  } else sum.innerHTML="";
+
+  $("reportBody").innerHTML = data.length
+    ? data.map(rowHTML).join("")
+    : `<tr><td colspan="9" class="empty">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>`;
+}
+</script>
+</body>
+</html>
