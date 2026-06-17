@@ -84,6 +84,28 @@
   .status.err{background:var(--red);color:var(--white)}
   .status.load{background:var(--bg-soft);color:var(--muted)}
   .hint{font-size:12px;color:var(--muted);margin-top:8px}
+  /* ---- ปุ่มถ่ายรูป ---- */
+  .btn.cam{background:var(--teal);color:var(--ink);gap:8px}
+  .btn.cam:hover{background:#92cbcb}
+  .btn.cam:disabled{background:var(--line-strong);color:var(--muted)}
+  /* ---- preview รูป ---- */
+  #imgPreview{display:none;width:100%;max-height:220px;object-fit:contain;
+    border:1px solid var(--line);border-radius:4px;margin-top:16px;background:var(--bg-soft)}
+  /* ---- modal ตั้งค่า API Key ---- */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;
+    align-items:center;justify-content:center}
+  .modal-bg.open{display:flex}
+  .modal{background:var(--white);border-radius:4px;padding:32px;max-width:480px;width:90%;
+    box-shadow:0 8px 24px rgba(0,0,0,.16)}
+  .modal h3{margin:0 0 8px;font-size:20px;font-weight:700}
+  .modal p{margin:0 0 20px;color:var(--muted);font-size:14px}
+  .modal label{margin-top:0}
+  .modal .actions{margin-top:20px}
+  /* ---- spinner ---- */
+  .spin{display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,.4);
+    border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;margin-right:8px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .btn.cam .spin{border-color:rgba(0,0,0,.2);border-top-color:var(--ink)}
   @media (max-width:599px){
     header{padding:20px}
     header h1{font-size:24px}
@@ -177,6 +199,15 @@
         <label>หมายเหตุ</label>
         <textarea id="note" placeholder="เช่น หลังออกกำลังกาย, ทานยาแล้ว ฯลฯ"></textarea>
       </div>
+      <!-- ปุ่มถ่ายรูป + preview -->
+      <div style="margin-top:20px">
+        <button class="btn cam" id="camBtn" onclick="triggerCamera()">
+          📷 ถ่ายรูปจากเครื่องวัด
+        </button>
+        <input id="camInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="readImage(event)">
+        <img id="imgPreview" alt="preview">
+        <div id="ocrStatus" style="font-size:13px;color:var(--muted);margin-top:8px;display:none"></div>
+      </div>
       <div class="actions">
         <button class="btn" id="saveBtn" onclick="saveRecord()">💾 บันทึกข้อมูล</button>
         <button class="btn ghost" onclick="clearForm()">ล้างฟอร์ม</button>
@@ -223,6 +254,22 @@
     </div>
   </section>
 </div>
+</div>
+
+<!-- ========== Modal ตั้งค่า Anthropic API Key ========== -->
+<div class="modal-bg" id="apiModal">
+  <div class="modal">
+    <h3>🔑 ตั้งค่า API Key</h3>
+    <p>ใช้สำหรับอ่านตัวเลขจากรูปถ่ายด้วย AI<br>
+      รับ key ฟรีได้ที่ <b>console.anthropic.com</b> → API Keys<br>
+      Key จะเก็บไว้ในเครื่องเท่านั้น ไม่ส่งออกไปที่อื่น</p>
+    <label>Anthropic API Key</label>
+    <input id="apiKeyInput" type="password" placeholder="sk-ant-api03-...">
+    <div class="actions">
+      <button class="btn" onclick="saveApiKey()">บันทึก Key</button>
+      <button class="btn ghost" onclick="closeApiModal()">ยกเลิก</button>
+    </div>
+  </div>
 </div>
 
 <!-- ========== Firebase ========== -->
@@ -429,6 +476,110 @@ function renderReport(){
   $("reportBody").innerHTML = data.length
     ? data.map(rowHTML).join("")
     : `<tr><td colspan="9" class="empty">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>`;
+}
+
+// ========== ถ่ายรูป / OCR ด้วย Claude Vision ==========
+const KEY_API = "bp_anthropic_key";
+
+window.triggerCamera = function(){
+  const key = localStorage.getItem(KEY_API);
+  if(!key){ openApiModal(); return; }
+  $("camInput").click();
+};
+
+window.openApiModal = function(){
+  $("apiKeyInput").value = localStorage.getItem(KEY_API) || "";
+  $("apiModal").classList.add("open");
+};
+window.closeApiModal = function(){ $("apiModal").classList.remove("open"); };
+window.saveApiKey = function(){
+  const k = $("apiKeyInput").value.trim();
+  if(!k){ alert("กรุณากรอก API Key"); return; }
+  localStorage.setItem(KEY_API, k);
+  $("apiModal").classList.remove("open");
+  $("camInput").click();
+};
+
+window.readImage = function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  // แสดง preview
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = $("imgPreview");
+    img.src = ev.target.result;
+    img.style.display = "block";
+    analyzeImage(ev.target.result.split(",")[1]); // base64 เฉพาะ data
+  };
+  reader.readAsDataURL(file);
+  // reset input ให้เลือกรูปเดิมซ้ำได้
+  e.target.value = "";
+};
+
+async function analyzeImage(base64){
+  const key = localStorage.getItem(KEY_API);
+  const btn = $("camBtn");
+  const status = $("ocrStatus");
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>กำลังอ่านตัวเลข...';
+  status.style.display = "block";
+  status.textContent = "⏳ AI กำลังวิเคราะห์รูป...";
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-allow-browser": "true",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 100,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+            { type: "text", text: `อ่านค่าจากหน้าจอเครื่องวัดความดันโลหิตในรูปนี้ แล้วตอบเฉพาะ JSON เท่านั้น ไม่มีข้อความอื่น รูปแบบ: {"sys":ตัวบน,"dia":ตัวล่าง,"pulse":ชีพจร} ถ้าอ่านค่าใดไม่ได้ให้ใส่ null` }
+          ]
+        }]
+      })
+    });
+
+    if(!res.ok){
+      const err = await res.json().catch(()=>({}));
+      if(res.status === 401) throw new Error("API Key ไม่ถูกต้อง — กรุณาตั้งค่าใหม่");
+      throw new Error(err.error?.message || `Error ${res.status}`);
+    }
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text || "";
+    const match = text.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error("ไม่พบข้อมูลในรูป กรุณาถ่ายรูปใหม่ให้ชัดขึ้น");
+
+    const vals = JSON.parse(match[0]);
+    let filled = [];
+    if(vals.sys)   { $("sys").value   = vals.sys;   filled.push(`ตัวบน: ${vals.sys}`);   }
+    if(vals.dia)   { $("dia").value   = vals.dia;   filled.push(`ตัวล่าง: ${vals.dia}`); }
+    if(vals.pulse) { $("pulse").value = vals.pulse; filled.push(`ชีพจร: ${vals.pulse}`); }
+
+    if(filled.length){
+      status.textContent = "✅ กรอกแล้ว — " + filled.join(", ") + " กรุณาตรวจสอบก่อนบันทึก";
+      status.style.color = "var(--ink)";
+    } else {
+      status.textContent = "⚠️ อ่านค่าไม่ได้ กรุณาถ่ายรูปใหม่ให้เห็นตัวเลขชัดเจน";
+      status.style.color = "var(--red)";
+    }
+  } catch(err) {
+    status.textContent = "❌ " + err.message;
+    status.style.color = "var(--red)";
+    if(err.message.includes("API Key")) openApiModal();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "📷 ถ่ายรูปจากเครื่องวัด";
+  }
 }
 </script>
 </body>
