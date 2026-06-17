@@ -118,10 +118,10 @@
     <input id="gName" placeholder="เช่น สมชาย ใจดี">
 
     <label>อายุ (ปี)</label>
-    <input id="gAge" type="number" min="0" placeholder="เช่น 45">
+    <input id="gAge" type="number" min="0" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="เช่น 45">
 
     <label>รหัสประจำตัว (Access Code)</label>
-    <input id="gCode" placeholder="เช่น เบอร์โทร 0812345678">
+    <input id="gCode" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="เช่น เบอร์โทร 0812345678">
     <div class="hint">จำรหัสนี้ไว้ ใช้รหัสเดิมตอนเปลี่ยนเครื่องเพื่อดึงข้อมูลเก่ากลับมา</div>
 
     <div class="actions">
@@ -153,15 +153,15 @@
       <div class="grid">
         <div>
           <label>ตัวบน / Systolic (mmHg)</label>
-          <input id="sys" type="number" min="0" placeholder="เช่น 120" autofocus>
+          <input id="sys" type="number" min="0" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="เช่น 120" autofocus>
         </div>
         <div>
           <label>ตัวล่าง / Diastolic (mmHg)</label>
-          <input id="dia" type="number" min="0" placeholder="เช่น 80">
+          <input id="dia" type="number" min="0" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="เช่น 80">
         </div>
         <div>
           <label>ชีพจร / Pulse (ครั้ง/นาที)</label>
-          <input id="pulse" type="number" min="0" placeholder="เช่น 72">
+          <input id="pulse" type="number" min="0" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="เช่น 72">
         </div>
         <div>
           <label>ช่วงเวลา</label>
