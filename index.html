@@ -96,28 +96,37 @@
     border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;margin-right:8px}
   @keyframes sp{to{transform:rotate(360deg)}}
   .btn.cam .spin{border-color:rgba(0,0,0,.2);border-top-color:var(--ink)}
+  /* ส่วน label ย่อบนมือถือ */
+  .lbl-sub{font-weight:400;color:var(--muted)}
   @media (max-width:599px){
     html,body{overflow-x:hidden;max-width:100vw}
-    header{padding:16px}
-    header h1{font-size:18px}
+    header{padding:16px;gap:8px}
+    header h1{font-size:17px}
     .who{font-size:12px}
     .wrap{padding:16px 12px}
     .card{padding:16px;border-radius:4px}
     .card h2{font-size:20px;margin-bottom:16px}
     .card h2 span{display:block;font-size:11px;margin-top:2px}
+    /* ซ่อนข้อความภาษาอังกฤษใน label บนมือถือ */
+    .lbl-sub{display:none}
+    label{font-size:13px}
     .grid{grid-template-columns:1fr 1fr;gap:12px}
     .btn{height:48px;font-size:15px;padding:0 20px}
     .btn.cam{width:100%}
     /* ซ่อนคอลัมน์ที่ไม่จำเป็นบนมือถือ */
-    table th:nth-child(2),table td:nth-child(2),  /* เวลา */
-    table th:nth-child(3),table td:nth-child(3),  /* ช่วง */
-    table th:nth-child(8),table td:nth-child(8)   /* หมายเหตุ */
+    table th:nth-child(2),table td:nth-child(2),
+    table th:nth-child(3),table td:nth-child(3),
+    table th:nth-child(8),table td:nth-child(8)
     {display:none}
     th,td{padding:10px 4px;font-size:13px}
     .tabs{gap:0}
     .tab{padding:10px 12px;font-size:14px}
-    .toolbar{gap:8px}
-    .toolbar input{min-width:0;flex:1}
+    /* toolbar หน้ารายงาน — stack เป็น 2 แถว */
+    .toolbar{flex-wrap:wrap;gap:8px}
+    .toolbar strong{width:100%;margin-bottom:0}
+    .toolbar>input[type=date]{flex:1;min-width:0}
+    .toolbar>.spacer{display:none}
+    .toolbar>.btn,.toolbar>.btn.ghost{margin-top:4px}
     .summary{grid-template-columns:1fr 1fr;gap:12px}
   }
   @media print{
@@ -181,15 +190,15 @@
       <h2>บันทึกค่าความดัน <span style="font-weight:400;font-size:13px;color:var(--muted)">— วันเวลาบันทึกอัตโนมัติ</span></h2>
       <div class="grid">
         <div>
-          <label>ตัวบน / Systolic (mmHg)</label>
+          <label>ตัวบน <span class="lbl-sub">/ Systolic (mmHg)</span></label>
           <input id="sys" type="number" min="0" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="เช่น 120" autofocus>
         </div>
         <div>
-          <label>ตัวล่าง / Diastolic (mmHg)</label>
+          <label>ตัวล่าง <span class="lbl-sub">/ Diastolic (mmHg)</span></label>
           <input id="dia" type="number" min="0" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="เช่น 80">
         </div>
         <div>
-          <label>ชีพจร / Pulse (ครั้ง/นาที)</label>
+          <label>ชีพจร <span class="lbl-sub">/ Pulse (bpm)</span></label>
           <input id="pulse" type="number" min="0" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="เช่น 72">
         </div>
         <div>
