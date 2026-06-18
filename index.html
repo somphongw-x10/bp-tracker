@@ -148,15 +148,18 @@
 <div id="gate" class="gate">
   <div class="card">
     <h2>🩺 ระบบบันทึกความดันโลหิต</h2>
-    <p class="sub">ใส่รหัสประจำตัวเพื่อเข้าใช้งาน — เครื่องไหนใช้รหัสเดียวกันจะเห็นข้อมูลชุดเดียวกัน</p>
+    <p class="sub" id="gateSub">ใส่รหัสประจำตัวเพื่อเข้าใช้งาน — เครื่องไหนใช้รหัสเดียวกันจะเห็นข้อมูลชุดเดียวกัน</p>
 
     <div id="gateStatus" class="status load">กำลังเชื่อมต่อระบบคลาวด์...</div>
 
-    <label>ชื่อ-นามสกุล</label>
-    <input id="gName" placeholder="เช่น สมชาย ใจดี">
+    <!-- แสดงเฉพาะครั้งแรก (ยังไม่มีข้อมูลในเครื่อง) -->
+    <div id="newUserFields">
+      <label>ชื่อ-นามสกุล</label>
+      <input id="gName" placeholder="เช่น สมชาย ใจดี">
 
-    <label>อายุ (ปี)</label>
-    <input id="gAge" type="number" min="0" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="เช่น 45">
+      <label>อายุ (ปี)</label>
+      <input id="gAge" type="number" min="0" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="เช่น 45">
+    </div>
 
     <label>รหัสประจำตัว (Access Code)</label>
     <input id="gCode" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="เช่น เบอร์โทร 0812345678">
@@ -306,10 +309,16 @@ try {
   const auth = getAuth(app);
   setLogLevel("error");
   signInAnonymously(auth).catch(e => setStatus("เข้าระบบไม่สำเร็จ: "+e.code, "err"));
-  // เติมค่าเดิมทันที (ไม่รอ auth) เพื่อเลี่ยงการเขียนทับสิ่งที่ผู้ใช้พิมพ์
-  $("gName").value = localStorage.getItem(KEY_NAME) || "";
+  // เติมค่าเดิมทันที และซ่อนช่องชื่อ/อายุถ้าเคยใช้แล้ว
+  const savedName = localStorage.getItem(KEY_NAME) || "";
+  const savedCode = localStorage.getItem(KEY_CODE) || "";
+  $("gName").value = savedName;
   $("gAge").value  = localStorage.getItem(KEY_AGE) || "";
-  $("gCode").value = localStorage.getItem(KEY_CODE) || "";
+  $("gCode").value = savedCode;
+  if(savedName){
+    $("newUserFields").style.display = "none";
+    $("gateSub").textContent = `ยินดีต้อนรับกลับ ${savedName} — ใส่รหัสเพื่อเข้าใช้งาน`;
+  }
   onAuthStateChanged(auth, user => {
     if (user) {
       setStatus("เชื่อมต่อระบบคลาวด์สำเร็จ ✓", "ok");
@@ -336,13 +345,13 @@ function classify(sys, dia){
 
 // ---------- เข้าใช้งาน ----------
 window.enterApp = function(){
-  const name = $("gName").value.trim();
-  const age  = $("gAge").value.trim();
+  const isNewUser = $("newUserFields").style.display !== "none";
+  const name = isNewUser ? $("gName").value.trim() : (localStorage.getItem(KEY_NAME) || "");
+  const age  = isNewUser ? $("gAge").value.trim()  : (localStorage.getItem(KEY_AGE) || "");
   code = $("gCode").value.trim();
-  if(!name){ setStatus("กรุณากรอกชื่อ-นามสกุล", "err"); return; }
-  if(!code){ setStatus("กรุณากรอกรหัสประจำตัว", "err"); return; }
 
-  // โค้ด Firestore ห้ามมี / และต้องไม่ว่าง
+  if(isNewUser && !name){ setStatus("กรุณากรอกชื่อ-นามสกุล", "err"); return; }
+  if(!code){ setStatus("กรุณากรอกรหัสประจำตัว", "err"); return; }
   if(code.includes("/")){ setStatus("รหัสห้ามมีเครื่องหมาย /", "err"); return; }
 
   patient = { name, age };
