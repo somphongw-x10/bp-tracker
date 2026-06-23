@@ -398,8 +398,9 @@ window.saveRecord = async function(){
   if(!sys || !dia){ alert("กรุณากรอกค่าตัวบนและตัวล่าง"); return; }
 
   const now = new Date();
+  const localDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const rec = {
-    date: now.toISOString().slice(0,10),         // อัตโนมัติ
+    date: localDate,                             // วันที่ตามเวลาท้องถิ่น
     time: now.toTimeString().slice(0,5),         // อัตโนมัติ
     ts: now.getTime(),
     period: $("period").value,
